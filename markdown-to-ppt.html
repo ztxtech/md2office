@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown → PowerPoint 粘贴板</title>
+<style>
+:root {
+  --bg: #f4f5f7;
+  --surface: #fff;
+  --ink: #1a1e2c;
+  --muted: #5e6b80;
+  --line: #d4dae5;
+  --accent: #0e7a6d;
+  --accent-h: #0a6258;
+  --danger: #b03a2e;
+  --code-bg: #eef1f6;
+  --shadow: 0 8px 24px rgba(15,25,45,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+main{width:min(1180px,calc(100vw - 32px));margin:0 auto;padding:24px 0 36px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.hint{color:var(--muted);font-size:13px}
+.status{min-height:34px;max-width:420px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);font-size:13px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status.ok{color:var(--accent-h);border-color:rgba(14,122,109,.3);background:#eaf7f4}
+.status.err{color:var(--danger);border-color:rgba(176,58,46,.25);background:#fef0ee}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-height:620px;display:flex;flex-direction:column;overflow:hidden}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.drop-zone{margin:12px 14px 0;padding:12px 14px;border:1.5px dashed #a3aec0;border-radius:8px;color:var(--muted);background:#fafbfc;font-size:13px;transition:.15s ease;cursor:default}
+.drop-zone.over{border-color:var(--accent);color:var(--accent-h);background:#eaf7f4}
+textarea{width:calc(100% - 28px);flex:1;min-height:400px;margin:10px 14px 0;padding:12px;border:1px solid var(--line);border-radius:8px;resize:vertical;color:var(--ink);background:#fcfdff;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;outline:none}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,122,109,.12)}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-top:1px solid var(--line);margin-top:10px}
+.opts{display:flex;flex-wrap:wrap;gap:8px 14px;color:var(--muted);font-size:13px}
+label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+button{appearance:none;border:0;border-radius:8px;background:var(--accent);color:#fff;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;min-width:160px;min-height:40px;transition:.12s ease}
+button:hover{background:var(--accent-h)}
+button:disabled{cursor:wait;opacity:.65}
+.preview{flex:1;padding:16px 20px 24px;overflow:auto;background:#fff}
+/* ── preview styles (these also get inlined for clipboard) ── */
+.ppt{color:#111;font-family:Calibri,Aptos,Arial,sans-serif;font-size:18px;line-height:1.4}
+.ppt h1,.ppt h2,.ppt h3,.ppt h4,.ppt h5,.ppt h6{font-family:Aptos Display,Calibri,Arial,sans-serif;margin:.7em 0 .3em;line-height:1.2}
+.ppt h1{font-size:36pt}
+.ppt h2{font-size:28pt}
+.ppt h3{font-size:22pt}
+.ppt h4{font-size:18pt}
+.ppt p{margin:.3em 0 .6em}
+.ppt ul,.ppt ol{margin:.25em 0 .65em 1.3em;padding-left:.9em}
+.ppt li{margin:.15em 0}
+.ppt table{width:100%;border-collapse:collapse;margin:.65em 0 .9em}
+.ppt th,.ppt td{border:1px solid #7f7f7f;padding:5px 8px;vertical-align:top;font-size:16px}
+.ppt th{background:#d9e2ec;font-weight:700}
+.ppt code{font-family:Consolas,"Liberation Mono",Menlo,monospace;background:#eef1f6;padding:.08em .22em;border-radius:3px;font-size:.86em}
+.ppt pre{margin:.65em 0 .9em;padding:10px;overflow:auto;background:#eef1f6;border:1px solid #cdd5e0;border-radius:5px}
+.ppt pre code{padding:0;background:0 0;border-radius:0;font-size:.82em}
+.ppt blockquote{margin:.6em 0 .8em;padding:.1em 0 .1em .85em;border-left:4px solid #9aa7b8;color:#3d4654}
+.ppt img{max-width:100%;height:auto}
+.ppt hr{border:0;border-top:1px solid #9aa7b8;margin:.9em 0}
+.ppt .math-display{display:block;margin:.55em 0;text-align:center}
+.empty-preview{height:100%;min-height:400px;display:grid;place-items:center;color:var(--muted);text-align:center}
+@media(max-width:860px){.workspace{display:block}.panel{min-height:500px;margin-bottom:14px}button{width:100%;margin-top:10px}.status{max-width:none;text-align:left}}
+</style>
+<!-- MathJax 3 — MathML output (not SVG) so PPT can convert to OMML equations -->
+<script>
+window.MathJax = {
+  tex: { inlineMath: [["\\(","\\)"]], displayMath: [["\\[","\\]"]] },
+  // Request native MathML output — no SVG, no HTML-CSS
+  options: { menuOptions: { settings: { renderer: "MathML" } } },
+  startup: { typeset: false }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Markdown → PowerPoint 粘贴板</h1>
+      <p class="hint">粘贴 Markdown 或拖入 .md 文件，转换后复制到 PowerPoint 粘贴</p>
+    </div>
+    <div id="status" class="status">等待输入</div>
+  </header>
+  <section class="workspace">
+    <div class="panel">
+      <div class="panel-hd"><span>Markdown</span><span id="fn" class="hint"></span></div>
+      <div id="dz" class="drop-zone">拖拽 .md 文件到此处，或直接在文本框中输入</div>
+      <textarea id="md" spellcheck="false" placeholder="# 标题
+
+正文、**加粗**、*斜体*、列表、表格、代码、公式……
+
+| 项目 | 数值 |
+| --- | ---: |
+| A | 42 |
+
+行内公式 $E=mc^2$
+
+块级公式：
+$$\int_0^1 x^2\,dx=\frac{1}{3}$$"></textarea>
+      <div class="controls">
+        <div class="opts">
+          <label><input id="optMath" type="checkbox" checked> 渲染公式</label>
+          <label><input id="optPlain" type="checkbox" checked> 同时复制纯文本</label>
+        </div>
+        <button id="btn" type="button">复制到剪贴板</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-hd"><span>PowerPoint 预览</span><span class="hint">复制内容为带内联样式的 HTML</span></div>
+      <div id="pv" class="preview"><div class="empty-preview">预览会显示在这里</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   Markdown → PowerPoint Clipboard — Core Logic
+   ═══════════════════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const md = $("md"), pv = $("pv"), st = $("status"),
+      dz = $("dz"), fn = $("fn"), btn = $("btn"),
+      optMath = $("optMath"), optPlain = $("optPlain");
+
+let timer = 0, lastHtml = "";
+
+/* ── Status ──────────────────────────────────── */
+function status(msg, cls="") { st.textContent = msg; st.className = "status " + cls; }
+
+/* ── HTML escape ─────────────────────────────── */
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ── Preserve math blocks from Markdown parsing ─ */
+function preserveMath(src){
+  const tok = [];
+  let t = src
+    // $$...$$ display
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_, f) => { const i=tok.length; tok.push(`<span class="math-display">\\[${esc(f.trim())}\\]</span>`); return `@@M${i}@@`; })
+    // $...$ inline  (not preceded by \, not across lines)
+    .replace(/(^|[^\\\$])\$([^\n$]+?)\$/g, (m, b, f) => { const i=tok.length; tok.push(`${b}<span class="math">\\(${esc(f.trim())}\\)</span>`); return `@@M${i}@@`; })
+    // \[...\] display
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, f) => { const i=tok.length; tok.push(`<span class="math-display">\\[${esc(f.trim())}\\]</span>`); return `@@M${i}@@`; })
+    // \(...\) inline
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, f) => { const i=tok.length; tok.push(`<span class="math">\\(${esc(f.trim())}\\)</span>`); return `@@M${i}@@`; });
+  return { text: t, tok };
+}
+function restoreMath(h, tok){ return h.replace(/@@M(\d+)@@/g, (_, i) => tok[+i] || ""); }
+
+/* ── Inline Markdown (fallback parser) ──────── */
+function inlineMd(t){
+  return esc(t)
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+    .replace(/__([^_]+)__/g,"<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g,"<em>$1</em>")
+    .replace(/_([^_]+)_/g,"<em>$1</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
+}
+
+/* ── Split table row respecting escaped pipes ── */
+function splitRow(l){
+  const t = l.trim().replace(/^\|/,"").replace(/\|$/,"");
+  const c = []; let cur = "", esc = false;
+  for(const ch of t){
+    if(ch==="\\" && !esc){ esc=true; cur+=ch; continue; }
+    if(ch==="|" && !esc){ c.push(cur.trim()); cur=""; }
+    else cur+=ch;
+    esc=false;
+  }
+  c.push(cur.trim()); return c;
+}
+function isDivider(l){ return /^ *\|? *:?-{3,}:? *(?:\| *:?-{3,}:? *)*\|? *$/.test(l); }
+
+/* ── Fallback Markdown parser ────────────────── */
+function fallbackMd(src){
+  const ls = src.split(/\r?\n/), out = [];
+  let para = [], listType = "", inCode = false, code = [];
+  function flushP(){ if(para.length){ out.push(`<p>${inlineMd(para.join(" "))}</p>`); para=[]; } }
+  function closeL(){ if(listType){ out.push(`</${listType}>`); listType=""; } }
+  for(let i=0;i<ls.length;i++){
+    const l = ls[i];
+    if(/^```/.test(l.trim())){ if(inCode){ out.push(`<pre><code>${esc(code.join("\n"))}</code></pre>`); code=[]; inCode=false; } else { flushP(); closeL(); inCode=true; } continue; }
+    if(inCode){ code.push(l); continue; }
+    if(l.includes("|") && i+1<ls.length && isDivider(ls[i+1])){
+      flushP(); closeL();
+      const hd = splitRow(l); i++;
+      const rows = [];
+      while(i+1<ls.length && ls[i+1].includes("|") && ls[i+1].trim()){ i++; rows.push(splitRow(ls[i])); }
+      out.push('<table style="border-collapse:collapse;width:100%"><thead><tr>',
+        ...hd.map(c => `<th style="border:1px solid #7f7f7f;padding:5px 8px;background:#d9e2ec;font-weight:700;vertical-align:top">${inlineMd(c)}</th>`),
+        '</tr></thead><tbody>');
+      for(const r of rows) out.push('<tr>', ...r.map(c => `<td style="border:1px solid #7f7f7f;padding:5px 8px;vertical-align:top">${inlineMd(c)}</td>`), '</tr>');
+      out.push('</tbody></table>'); continue;
+    }
+    const hd = /^(#{1,6})\s+(.+)$/.exec(l);
+    if(hd){ flushP(); closeL(); const n=hd[1].length; out.push(`<h${n}>${inlineMd(hd[2])}</h${n}>`); continue; }
+    const ul = /^\s*[-*+]\s+(.+)$/.exec(l), ol = /^\s*\d+\.\s+(.+)$/.exec(l);
+    if(ul||ol){ flushP(); const nt=ul?"ul":"ol"; if(listType!==nt){ closeL(); out.push(`<${nt}>`); listType=nt; } out.push(`<li>${inlineMd((ul||ol)[1])}</li>`); continue; }
+    if(/^>\s?/.test(l)){ flushP(); closeL(); out.push(`<blockquote>${inlineMd(l.replace(/^>\s?/,""))}</blockquote>`); continue; }
+    if(/^---+$/.test(l.trim())){ flushP(); closeL(); out.push('<hr>'); continue; }
+    if(!l.trim()){ flushP(); closeL(); continue; }
+    para.push(l.trim());
+  }
+  flushP(); closeL();
+  if(inCode) out.push(`<pre><code>${esc(code.join("\n"))}</code></pre>`);
+  return out.join("\n");
+}
+
+/* ── Main Markdown→HTML ──────────────────────── */
+function mdToHtml(src){
+  const { text, tok } = preserveMath(src);
+  let html;
+  if(window.marked){
+    marked.setOptions({ gfm:true, breaks:false, mangle:false, headerIds:false });
+    html = marked.parse(text);
+  } else {
+    html = fallbackMd(text);
+  }
+  html = restoreMath(html, tok);
+  if(window.DOMPurify){
+    html = DOMPurify.sanitize(html, {
+      ADD_TAGS: ["mjx-container","math","mrow","mi","mo","mn","msup","msub","mfrac","msqrt","mroot","munder","mover","munderover","mtable","mtr","mtd","mtext","mspace","mpadded","mstyle","merror","annotation","semantics"],
+      ADD_ATTR: ["xmlns","display","mathvariant","scriptlevel","linethickness","notation","style","class","alttext","role"]
+    });
+  }
+  return `<div class="ppt">${html}</div>`;
+}
+
+/* ── Inline all styles for clipboard HTML ────── */
+/* PPT ignores <style> blocks — every element must have inline style */
+const INLINE_MAP = {
+  "h1": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:36pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
+  "h2": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:28pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
+  "h3": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:22pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
+  "h4": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:18pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
+  "h5": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:15pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
+  "h6": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:13pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
+  "p":  "margin:.3em 0 .6em;font-size:18px;line-height:1.4",
+  "ul": "margin:.25em 0 .65em 1.3em;padding-left:.9em",
+  "ol": "margin:.25em 0 .65em 1.3em;padding-left:.9em",
+  "li": "margin:.15em 0;font-size:18px",
+  "table": "border-collapse:collapse;width:100%;margin:.65em 0 .9em",
+  "th": "border:1px solid #7f7f7f;padding:5px 8px;background:#d9e2ec;font-weight:700;vertical-align:top;font-size:16px",
+  "td": "border:1px solid #7f7f7f;padding:5px 8px;vertical-align:top;font-size:16px",
+  "code": "font-family:Consolas,'Liberation Mono',Menlo,monospace;background:#eef1f6;padding:.08em .22em;border-radius:3px;font-size:.86em",
+  "pre": "margin:.65em 0 .9em;padding:10px;overflow:auto;background:#eef1f6;border:1px solid #cdd5e0;border-radius:5px",
+  "blockquote": "margin:.6em 0 .8em;padding:.1em 0 .1em .85em;border-left:4px solid #9aa7b8;color:#3d4654",
+  "hr":  "border:0;border-top:1px solid #9aa7b8;margin:.9em 0",
+  "a":   "color:#0e7a6d;text-decoration:underline",
+  "img":  "max-width:100%;height:auto",
+  "strong": "font-weight:700",
+  "em":    "font-style:italic",
+  "del":   "text-decoration:line-through",
+};
+
+function inlineStyles(container){
+  // Remove mjx-container wrappers but keep their MathML children
+  container.querySelectorAll("mjx-container").forEach(el => {
+    // Find the <math> element inside
+    const mathEl = el.querySelector("math");
+    if(mathEl){
+      // Add display=block if it was a display math
+      if(el.classList.contains("MJXc-display") || el.getAttribute("display") === "block" || el.closest(".math-display")){
+        mathEl.setAttribute("display","block");
+      }
+      el.replaceWith(mathEl);
+    } else {
+      // If no <math> found, try to extract any MathML
+      const mathChildren = el.querySelectorAll("math, mrow, mi, mo, mn");
+      if(mathChildren.length > 0){
+        el.replaceWith(...mathChildren);
+      } else {
+        // Last resort: keep the text content
+        el.replaceWith(el.textContent);
+      }
+    }
+  });
+
+  // Inline styles on all elements
+  for(const [tag, style] of Object.entries(INLINE_MAP)){
+    container.querySelectorAll(tag).forEach(el => {
+      el.setAttribute("style", style);
+    });
+  }
+
+  // Handle .math-display wrappers — make sure the <math> inside gets display=block
+  container.querySelectorAll(".math-display").forEach(el => {
+    const mathEl = el.querySelector("math");
+    if(mathEl) mathEl.setAttribute("display","block");
+    // Unwrap the span.math-display, keeping inner content
+    while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+    el.remove();
+  });
+
+  // Handle .math (inline) wrappers
+  container.querySelectorAll(".math").forEach(el => {
+    const mathEl = el.querySelector("math");
+    if(mathEl) mathEl.removeAttribute("display"); // inline by default
+    while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+    el.remove();
+  });
+
+  // Ensure the root div has base PPT style
+  const root = container.querySelector(".ppt") || container;
+  root.setAttribute("style", "color:#111;font-family:Calibri,Aptos,Arial,sans-serif;font-size:18px;line-height:1.4");
+}
+
+/* ── Build clipboard HTML ────────────────────── */
+function buildClipboardHtml(){
+  const wrap = document.createElement("div");
+  wrap.innerHTML = pv.innerHTML;
+  inlineStyles(wrap);
+
+  // Clean up: remove any remaining class attributes, scripts, form elements
+  wrap.querySelectorAll("[class]").forEach(el => el.removeAttribute("class"));
+  wrap.querySelectorAll("script,button,input,textarea,select").forEach(el => el.remove());
+
+  // Extract inner HTML (the .ppt div content or all children)
+  const pptDiv = wrap.querySelector("[style*='Calibri']") || wrap;
+  const bodyHtml = pptDiv.innerHTML;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${bodyHtml}</body></html>`;
+}
+
+/* ── Plain text from preview ─────────────────── */
+function toPlainText(){
+  const d = document.createElement("div"); d.innerHTML = pv.innerHTML; return d.innerText.trim();
+}
+
+/* ── Render preview ──────────────────────────── */
+async function render(){
+  const src = md.value.trim();
+  fn.textContent = "";
+  if(!src){ lastHtml=""; pv.innerHTML='<div class="empty-preview">预览会显示在这里</div>'; status("等待输入"); return; }
+
+  pv.innerHTML = mdToHtml(md.value);
+
+  if(optMath.checked && window.MathJax?.typesetPromise){
+    try{ await MathJax.typesetPromise([pv]); }
+    catch(e){ status("公式渲染失败: "+e.message, "err"); }
+  }
+
+  lastHtml = buildClipboardHtml();
+  status("已生成预览，可复制", "ok");
+}
+
+function scheduleRender(){ clearTimeout(timer); timer = setTimeout(render, 200); }
+
+/* ── Copy for PowerPoint ─────────────────────── */
+async function copy(){
+  if(!md.value.trim()){ status("没有可复制的内容", "err"); return; }
+  btn.disabled = true; btn.textContent = "正在复制…";
+  try{
+    await render();
+    const html = lastHtml || buildClipboardHtml();
+    const plain = optPlain.checked ? toPlainText() : md.value;
+    if(navigator.clipboard && window.ClipboardItem){
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html":  new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" })
+        })
+      ]);
+    } else {
+      // Fallback: use execCommand
+      const tmp = document.createElement("div");
+      tmp.contentEditable = "true";
+      tmp.style.cssText = "position:fixed;left:-9999px;top:0";
+      tmp.innerHTML = pv.innerHTML;
+      document.body.appendChild(tmp);
+      const rng = document.createRange(); rng.selectNodeContents(tmp);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rng);
+      document.execCommand("copy");
+      sel.removeAllRanges(); tmp.remove();
+    }
+    status("✓ 已复制，切到 PowerPoint 粘贴", "ok");
+  } catch(e){ status("复制失败: "+e.message, "err"); }
+  finally{ btn.disabled=false; btn.textContent="复制到剪贴板"; }
+}
+
+/* ── File drag-and-drop ──────────────────────── */
+async function loadFile(f){
+  if(!f) return;
+  if(!/(\.md|\.markdown|\.txt)$/i.test(f.name)){ status("请拖入 .md / .markdown / .txt 文件", "err"); return; }
+  md.value = await f.text();
+  fn.textContent = f.name;
+  status("已载入 "+f.name, "ok");
+  scheduleRender();
+}
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("over"));
+dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("over"); loadFile(e.dataTransfer.files[0]); });
+
+/* ── Events ──────────────────────────────────── */
+md.addEventListener("input", scheduleRender);
+optMath.addEventListener("change", scheduleRender);
+btn.addEventListener("click", copy);
+
+window.addEventListener("load", () => {
+  scheduleRender();
+  setTimeout(() => {
+    if(!window.marked || !window.DOMPurify || !window.MathJax)
+      status("外部库未完全载入，已启用内置基础转换", "err");
+  }, 2500);
+});
+</script>
+</body>
+</html>
