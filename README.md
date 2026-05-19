@@ -1,10 +1,10 @@
-# Markdown to PowerPoint Pasteboard
+# Markdown to Office Pasteboard
 
 <p align="center">
   <img alt="GitHub Pages" src="https://img.shields.io/badge/GitHub%20Pages-ready-222222?style=for-the-badge&logo=githubpages&logoColor=white">
   <img alt="Static HTML" src="https://img.shields.io/badge/Static%20HTML-single%20file-E34F26?style=for-the-badge&logo=html5&logoColor=white">
   <img alt="No Build" src="https://img.shields.io/badge/No%20Build-zero%20setup-00A67E?style=for-the-badge&logo=githubactions&logoColor=white">
-  <img alt="PowerPoint" src="https://img.shields.io/badge/PowerPoint-paste%20ready-B7472A?style=for-the-badge&logo=microsoftpowerpoint&logoColor=white">
+  <img alt="Office" src="https://img.shields.io/badge/Office-paste%20ready-2563EB?style=for-the-badge">
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  一个面向 PowerPoint 粘贴体验的 Markdown 富文本转换工具。
+  一个面向 Office 粘贴体验的 Markdown 富文本转换工具。
   <br>
   粘贴 Markdown 或拖入 `.md` 文件，点击按钮，把格式化后的 HTML 富文本复制到剪贴板。
 </p>
@@ -29,9 +29,9 @@
 - 支持直接粘贴 Markdown 文本。
 - 支持拖拽 `.md`、`.markdown`、`.txt` 文件。
 - 支持标题、段落、加粗、斜体、链接、引用、分隔线、列表、代码块。
-- 支持 GFM 风格表格，并为 PowerPoint 粘贴做了边框和单元格样式。
+- 支持 GFM 风格表格，并为 Office 粘贴做了边框和单元格样式。
 - 支持行内公式 `$E=mc^2$` 和块级公式 `$$...$$`。
-- 公式默认通过 MathJax 渲染为 SVG/HTML 视觉结果，粘贴到 PowerPoint 后更容易保持外观。
+- 公式默认通过 MathJax 渲染为 SVG/HTML 视觉结果，粘贴到 Office 后更容易保持外观。
 - 默认不复制纯文本，只把富文本作为主要粘贴内容；需要兜底文本时可手动勾选。
 
 ## 快速使用
@@ -39,7 +39,7 @@
 直接打开：
 
 ```text
-markdown-to-ppt.html
+md2office.html
 ```
 
 或者用本地静态服务器打开，剪贴板权限会更稳定：
@@ -51,7 +51,7 @@ python3 -m http.server 8765
 然后访问：
 
 ```text
-http://localhost:8765/markdown-to-ppt.html
+http://localhost:8765/md2office.html
 ```
 
 使用流程：
@@ -59,7 +59,7 @@ http://localhost:8765/markdown-to-ppt.html
 1. 在左侧文本框粘贴 Markdown，或拖入 Markdown 文件。
 2. 检查右侧预览。
 3. 点击“复制到剪贴板”。
-4. 切到 PowerPoint，直接粘贴。
+4. 切到 Office，直接粘贴。
 
 ## GitHub Pages 部署
 
@@ -90,14 +90,14 @@ http://localhost:8765/markdown-to-ppt.html
 ├── .nojekyll
 ├── README.md
 ├── index.html
-└── markdown-to-ppt.html
+└── md2office.html
 ```
 
 ## 转换策略
 
 这个工具复制的是 `text/html` 富文本剪贴板内容，并同时准备一个可选的 `text/plain` 兜底。
 
-PowerPoint 对 HTML 粘贴的支持比对 Markdown 源码更好，所以工具会先把 Markdown 转成适合 Office 粘贴的 HTML：
+Office 对 HTML 粘贴的支持比对 Markdown 源码更好，所以工具会先把 Markdown 转成适合 Office 粘贴的 HTML：
 
 - Markdown 解析：`marked`
 - HTML 清理：`DOMPurify`
@@ -106,10 +106,10 @@ PowerPoint 对 HTML 粘贴的支持比对 Markdown 源码更好，所以工具�
 
 ## 已知限制
 
-- 浏览器不能直接控制 PowerPoint 粘贴动作，所以需要手动切到 PowerPoint 后粘贴。
-- 公式粘贴后通常是视觉形态，不一定是 PowerPoint 原生可编辑公式。
+- 浏览器不能直接控制 Office 粘贴动作，所以需要手动切到 Office 后粘贴。
+- 公式粘贴后通常是视觉形态，不一定是 Office 原生可编辑公式。
 - 如果网络无法访问 CDN，页面会退回到内置基础 Markdown 转换，复杂公式渲染会受影响。
-- 不同版本的 PowerPoint 对 HTML、SVG、表格边框的粘贴支持可能略有差异。
+- 不同版本的 Office 对 HTML、SVG、表格边框的粘贴支持可能略有差异。
 
 ## 开发
 
@@ -124,7 +124,7 @@ python3 -m http.server 8765
 静态检查可以用：
 
 ```bash
-node -e "const fs=require('fs'); const html=fs.readFileSync('markdown-to-ppt.html','utf8'); for (const m of html.matchAll(/<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)) new Function(m[1]); console.log('ok')"
+node -e "const fs=require('fs'); const html=fs.readFileSync('md2office.html','utf8'); for (const m of html.matchAll(/<script(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/g)) new Function(m[1]); console.log('ok')"
 ```
 
 ## 致谢

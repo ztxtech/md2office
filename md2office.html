@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Markdown → PowerPoint 粘贴板</title>
+<title>Markdown → Office 粘贴板</title>
 <style>
 :root {
   --bg: #f4f5f7;
@@ -42,29 +42,29 @@ button:hover{background:var(--accent-h)}
 button:disabled{cursor:wait;opacity:.65}
 .preview{flex:1;padding:16px 20px 24px;overflow:auto;background:#fff}
 /* ── preview styles (these also get inlined for clipboard) ── */
-.ppt{color:#111;font-family:Calibri,Aptos,Arial,sans-serif;font-size:18px;line-height:1.4}
-.ppt h1,.ppt h2,.ppt h3,.ppt h4,.ppt h5,.ppt h6{font-family:Aptos Display,Calibri,Arial,sans-serif;margin:.7em 0 .3em;line-height:1.2}
-.ppt h1{font-size:36pt}
-.ppt h2{font-size:28pt}
-.ppt h3{font-size:22pt}
-.ppt h4{font-size:18pt}
-.ppt p{margin:.3em 0 .6em}
-.ppt ul,.ppt ol{margin:.25em 0 .65em 1.3em;padding-left:.9em}
-.ppt li{margin:.15em 0}
-.ppt table{width:100%;border-collapse:collapse;margin:.65em 0 .9em}
-.ppt th,.ppt td{border:1px solid #7f7f7f;padding:5px 8px;vertical-align:top;font-size:16px}
-.ppt th{background:#d9e2ec;font-weight:700}
-.ppt code{font-family:Consolas,"Liberation Mono",Menlo,monospace;background:#eef1f6;padding:.08em .22em;border-radius:3px;font-size:.86em}
-.ppt pre{margin:.65em 0 .9em;padding:10px;overflow:auto;background:#eef1f6;border:1px solid #cdd5e0;border-radius:5px}
-.ppt pre code{padding:0;background:0 0;border-radius:0;font-size:.82em}
-.ppt blockquote{margin:.6em 0 .8em;padding:.1em 0 .1em .85em;border-left:4px solid #9aa7b8;color:#3d4654}
-.ppt img{max-width:100%;height:auto}
-.ppt hr{border:0;border-top:1px solid #9aa7b8;margin:.9em 0}
-.ppt .math-display{display:block;margin:.55em 0;text-align:center}
+.office{color:#111;font-family:Calibri,Aptos,Arial,sans-serif;font-size:18px;line-height:1.4}
+.office h1,.office h2,.office h3,.office h4,.office h5,.office h6{font-family:Aptos Display,Calibri,Arial,sans-serif;margin:.7em 0 .3em;line-height:1.2}
+.office h1{font-size:36pt}
+.office h2{font-size:28pt}
+.office h3{font-size:22pt}
+.office h4{font-size:18pt}
+.office p{margin:.3em 0 .6em}
+.office ul,.office ol{margin:.25em 0 .65em 1.3em;padding-left:.9em}
+.office li{margin:.15em 0}
+.office table{width:100%;border-collapse:collapse;margin:.65em 0 .9em}
+.office th,.office td{border:1px solid #7f7f7f;padding:5px 8px;vertical-align:top;font-size:16px}
+.office th{background:#d9e2ec;font-weight:700}
+.office code{font-family:Consolas,"Liberation Mono",Menlo,monospace;background:#eef1f6;padding:.08em .22em;border-radius:3px;font-size:.86em}
+.office pre{margin:.65em 0 .9em;padding:10px;overflow:auto;background:#eef1f6;border:1px solid #cdd5e0;border-radius:5px}
+.office pre code{padding:0;background:0 0;border-radius:0;font-size:.82em}
+.office blockquote{margin:.6em 0 .8em;padding:.1em 0 .1em .85em;border-left:4px solid #9aa7b8;color:#3d4654}
+.office img{max-width:100%;height:auto}
+.office hr{border:0;border-top:1px solid #9aa7b8;margin:.9em 0}
+.office .math-display{display:block;margin:.55em 0;text-align:center}
 .empty-preview{height:100%;min-height:400px;display:grid;place-items:center;color:var(--muted);text-align:center}
 @media(max-width:860px){.workspace{display:block}.panel{min-height:500px;margin-bottom:14px}button{width:100%;margin-top:10px}.status{max-width:none;text-align:left}}
 </style>
-<!-- MathJax 3 — MathML output (not SVG) so PPT can convert to OMML equations -->
+<!-- MathJax 3 — MathML output (not SVG) so Office can convert equations where supported -->
 <script>
 window.MathJax = {
   tex: { inlineMath: [["\\(","\\)"]], displayMath: [["\\[","\\]"]] },
@@ -81,8 +81,8 @@ window.MathJax = {
 <main>
   <header>
     <div>
-      <h1>Markdown → PowerPoint 粘贴板</h1>
-      <p class="hint">粘贴 Markdown 或拖入 .md 文件，转换后复制到 PowerPoint 粘贴</p>
+      <h1>Markdown → Office 粘贴板</h1>
+      <p class="hint">粘贴 Markdown 或拖入 .md 文件，转换后复制到 Office 粘贴</p>
     </div>
     <div id="status" class="status">等待输入</div>
   </header>
@@ -105,13 +105,13 @@ $$\int_0^1 x^2\,dx=\frac{1}{3}$$"></textarea>
       <div class="controls">
         <div class="opts">
           <label><input id="optMath" type="checkbox" checked> 渲染公式</label>
-          <label><input id="optPlain" type="checkbox" checked> 同时复制纯文本</label>
+          <label><input id="optPlain" type="checkbox"> 同时复制纯文本</label>
         </div>
         <button id="btn" type="button">复制到剪贴板</button>
       </div>
     </div>
     <div class="panel">
-      <div class="panel-hd"><span>PowerPoint 预览</span><span class="hint">复制内容为带内联样式的 HTML</span></div>
+      <div class="panel-hd"><span>Office 预览</span><span class="hint">复制内容为带内联样式的 HTML</span></div>
       <div id="pv" class="preview"><div class="empty-preview">预览会显示在这里</div></div>
     </div>
   </section>
@@ -119,7 +119,7 @@ $$\int_0^1 x^2\,dx=\frac{1}{3}$$"></textarea>
 
 <script>
 /* ═══════════════════════════════════════════════════
-   Markdown → PowerPoint Clipboard — Core Logic
+   Markdown → Office Clipboard — Core Logic
    ═══════════════════════════════════════════════════ */
 const $  = id => document.getElementById(id);
 const md = $("md"), pv = $("pv"), st = $("status"),
@@ -227,11 +227,11 @@ function mdToHtml(src){
       ADD_ATTR: ["xmlns","display","mathvariant","scriptlevel","linethickness","notation","style","class","alttext","role"]
     });
   }
-  return `<div class="ppt">${html}</div>`;
+  return `<div class="office">${html}</div>`;
 }
 
 /* ── Inline all styles for clipboard HTML ────── */
-/* PPT ignores <style> blocks — every element must have inline style */
+/* Office apps often ignore <style> blocks — every element must have inline style */
 const INLINE_MAP = {
   "h1": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:36pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
   "h2": "font-family:Aptos Display,Calibri,Arial,sans-serif;font-size:28pt;font-weight:700;margin:.7em 0 .3em;line-height:1.2",
@@ -304,8 +304,8 @@ function inlineStyles(container){
     el.remove();
   });
 
-  // Ensure the root div has base PPT style
-  const root = container.querySelector(".ppt") || container;
+  // Ensure the root div has base Office style
+  const root = container.querySelector(".office") || container;
   root.setAttribute("style", "color:#111;font-family:Calibri,Aptos,Arial,sans-serif;font-size:18px;line-height:1.4");
 }
 
@@ -319,9 +319,9 @@ function buildClipboardHtml(){
   wrap.querySelectorAll("[class]").forEach(el => el.removeAttribute("class"));
   wrap.querySelectorAll("script,button,input,textarea,select").forEach(el => el.remove());
 
-  // Extract inner HTML (the .ppt div content or all children)
-  const pptDiv = wrap.querySelector("[style*='Calibri']") || wrap;
-  const bodyHtml = pptDiv.innerHTML;
+  // Extract inner HTML (the .office div content or all children)
+  const officeDiv = wrap.querySelector("[style*='Calibri']") || wrap;
+  const bodyHtml = officeDiv.innerHTML;
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${bodyHtml}</body></html>`;
 }
@@ -350,7 +350,7 @@ async function render(){
 
 function scheduleRender(){ clearTimeout(timer); timer = setTimeout(render, 200); }
 
-/* ── Copy for PowerPoint ─────────────────────── */
+/* ── Copy for Office ─────────────────────────── */
 async function copy(){
   if(!md.value.trim()){ status("没有可复制的内容", "err"); return; }
   btn.disabled = true; btn.textContent = "正在复制…";
@@ -377,7 +377,7 @@ async function copy(){
       document.execCommand("copy");
       sel.removeAllRanges(); tmp.remove();
     }
-    status("✓ 已复制，切到 PowerPoint 粘贴", "ok");
+    status("✓ 已复制，切到 Office 粘贴", "ok");
   } catch(e){ status("复制失败: "+e.message, "err"); }
   finally{ btn.disabled=false; btn.textContent="复制到剪贴板"; }
 }
