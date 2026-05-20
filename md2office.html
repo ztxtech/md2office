@@ -64,18 +64,21 @@ button:disabled{cursor:wait;opacity:.65}
 .empty-preview{height:100%;min-height:400px;display:grid;place-items:center;color:var(--muted);text-align:center}
 @media(max-width:860px){.workspace{display:block}.panel{min-height:500px;margin-bottom:14px}button{width:100%;margin-top:10px}.status{max-width:none;text-align:left}}
 </style>
-<!-- MathJax 3 — MathML output (not SVG) so Office can convert equations where supported -->
+<!-- MathJax 3 — serialize TeX as Presentation MathML for Office clipboard import -->
 <script>
 window.MathJax = {
-  tex: { inlineMath: [["\\(","\\)"]], displayMath: [["\\[","\\]"]] },
-  // Request native MathML output — no SVG, no HTML-CSS
-  options: { menuOptions: { settings: { renderer: "MathML" } } },
+  loader: { load: ["input/tex"] },
+  tex: {
+    inlineMath: [["\\(","\\)"]],
+    displayMath: [["\\[","\\]"]],
+    processEscapes: true
+  },
   startup: { typeset: false }
 };
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js"></script>
 </head>
 <body>
 <main>
@@ -150,6 +153,46 @@ function preserveMath(src){
 }
 function restoreMath(h, tok){ return h.replace(/@@M(\d+)@@/g, (_, i) => tok[+i] || ""); }
 
+function mathText(el){
+  return el.textContent
+    .replace(/^\\\(|\\\)$/g, "")
+    .replace(/^\\\[|\\\]$/g, "")
+    .trim();
+}
+
+function cleanMathML(root){
+  root.querySelectorAll("math").forEach(mathEl => {
+    mathEl.setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML");
+  });
+  root.querySelectorAll("math, math *").forEach(el => {
+    for(const attr of [...el.attributes]){
+      if(attr.name.startsWith("data-mjx-")) el.removeAttribute(attr.name);
+    }
+  });
+}
+
+async function renderMathML(container){
+  if(!window.MathJax?.tex2mmlPromise) return false;
+  const nodes = [...container.querySelectorAll(".math, .math-display")];
+  await Promise.all(nodes.map(async el => {
+    const display = el.classList.contains("math-display");
+    const tex = mathText(el);
+    if(!tex) return;
+    const mml = await MathJax.tex2mmlPromise(tex, {display});
+    const wrap = document.createElement("span");
+    wrap.className = display ? "math-display" : "math";
+    wrap.innerHTML = mml;
+    const mathEl = wrap.querySelector("math");
+    if(mathEl){
+      cleanMathML(wrap);
+      if(display) mathEl.setAttribute("display", "block");
+      else mathEl.removeAttribute("display");
+    }
+    el.replaceWith(wrap);
+  }));
+  return nodes.length > 0;
+}
+
 /* ── Inline Markdown (fallback parser) ──────── */
 function inlineMd(t){
   return esc(t)
@@ -223,8 +266,26 @@ function mdToHtml(src){
   html = restoreMath(html, tok);
   if(window.DOMPurify){
     html = DOMPurify.sanitize(html, {
-      ADD_TAGS: ["mjx-container","math","mrow","mi","mo","mn","msup","msub","mfrac","msqrt","mroot","munder","mover","munderover","mtable","mtr","mtd","mtext","mspace","mpadded","mstyle","merror","annotation","semantics"],
-      ADD_ATTR: ["xmlns","display","mathvariant","scriptlevel","linethickness","notation","style","class","alttext","role"]
+      ADD_TAGS: [
+        "mjx-container",
+        "math","semantics","annotation","annotation-xml",
+        "mrow","mi","mn","mo","mtext","mspace","ms",
+        "mfrac","msqrt","mroot","mstyle","merror","mpadded","mphantom",
+        "mfenced","menclose","msub","msup","msubsup","munder","mover","munderover",
+        "mmultiscripts","mprescripts","none",
+        "mtable","mtr","mlabeledtr","mtd","maligngroup","malignmark"
+      ],
+      ADD_ATTR: [
+        "xmlns","display","encoding","alttext","role","style","class","id",
+        "mathvariant","mathsize","mathcolor","mathbackground","dir","href",
+        "scriptlevel","displaystyle","scriptsizemultiplier","scriptminsize",
+        "form","fence","separator","stretchy","symmetric","maxsize","minsize",
+        "largeop","movablelimits","accent","lspace","rspace","linebreak",
+        "infixlinebreakstyle","decimalpoint","linethickness","numalign","denomalign","bevelled",
+        "notation","rowalign","columnalign","groupalign","align","rowspacing","columnspacing",
+        "rowlines","columnlines","frame","framespacing","equalrows","equalcolumns",
+        "side","minlabelspacing","rowspan","columnspan","edge","selection","actiontype"
+      ]
     });
   }
   return `<div class="office">${html}</div>`;
@@ -258,18 +319,16 @@ const INLINE_MAP = {
 };
 
 function inlineStyles(container){
-  // Remove mjx-container wrappers but keep their MathML children
+  // Remove MathJax wrappers but keep serialized Presentation MathML for Office.
   container.querySelectorAll("mjx-container").forEach(el => {
-    // Find the <math> element inside
     const mathEl = el.querySelector("math");
     if(mathEl){
-      // Add display=block if it was a display math
-      if(el.classList.contains("MJXc-display") || el.getAttribute("display") === "block" || el.closest(".math-display")){
+      mathEl.setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML");
+      if(el.getAttribute("display") === "block" || el.closest(".math-display")){
         mathEl.setAttribute("display","block");
       }
       el.replaceWith(mathEl);
     } else {
-      // If no <math> found, try to extract any MathML
       const mathChildren = el.querySelectorAll("math, mrow, mi, mo, mn");
       if(mathChildren.length > 0){
         el.replaceWith(...mathChildren);
@@ -279,6 +338,7 @@ function inlineStyles(container){
       }
     }
   });
+  cleanMathML(container);
 
   // Inline styles on all elements
   for(const [tag, style] of Object.entries(INLINE_MAP)){
@@ -290,7 +350,10 @@ function inlineStyles(container){
   // Handle .math-display wrappers — make sure the <math> inside gets display=block
   container.querySelectorAll(".math-display").forEach(el => {
     const mathEl = el.querySelector("math");
-    if(mathEl) mathEl.setAttribute("display","block");
+    if(mathEl){
+      mathEl.setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML");
+      mathEl.setAttribute("display","block");
+    }
     // Unwrap the span.math-display, keeping inner content
     while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
     el.remove();
@@ -299,7 +362,10 @@ function inlineStyles(container){
   // Handle .math (inline) wrappers
   container.querySelectorAll(".math").forEach(el => {
     const mathEl = el.querySelector("math");
-    if(mathEl) mathEl.removeAttribute("display"); // inline by default
+    if(mathEl){
+      mathEl.setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML");
+      mathEl.removeAttribute("display"); // inline by default
+    }
     while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
     el.remove();
   });
@@ -334,18 +400,19 @@ function toPlainText(){
 /* ── Render preview ──────────────────────────── */
 async function render(){
   const src = md.value.trim();
+  let mathFailed = false;
   fn.textContent = "";
   if(!src){ lastHtml=""; pv.innerHTML='<div class="empty-preview">预览会显示在这里</div>'; status("等待输入"); return; }
 
   pv.innerHTML = mdToHtml(md.value);
 
-  if(optMath.checked && window.MathJax?.typesetPromise){
-    try{ await MathJax.typesetPromise([pv]); }
-    catch(e){ status("公式渲染失败: "+e.message, "err"); }
+  if(optMath.checked && window.MathJax?.tex2mmlPromise){
+    try{ await renderMathML(pv); }
+    catch(e){ mathFailed = true; status("公式渲染失败: "+e.message, "err"); }
   }
 
   lastHtml = buildClipboardHtml();
-  status("已生成预览，可复制", "ok");
+  if(!mathFailed) status("已生成预览，可复制", "ok");
 }
 
 function scheduleRender(){ clearTimeout(timer); timer = setTimeout(render, 200); }
@@ -403,7 +470,7 @@ btn.addEventListener("click", copy);
 window.addEventListener("load", () => {
   scheduleRender();
   setTimeout(() => {
-    if(!window.marked || !window.DOMPurify || !window.MathJax)
+    if(!window.marked || !window.DOMPurify || !window.MathJax?.tex2mmlPromise)
       status("外部库未完全载入，已启用内置基础转换", "err");
   }, 2500);
 });
